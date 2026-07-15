@@ -1,0 +1,31 @@
+import type { Metadata } from "next";
+import { IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
+import { Providers } from "./providers";
+import "./globals.css";
+
+const sans = IBM_Plex_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-plex-sans",
+});
+
+const mono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  variable: "--font-plex-mono",
+});
+
+export const metadata: Metadata = {
+  title: "drop",
+  description: "Commit files to a repo from the browser.",
+};
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="ko" className={`${sans.variable} ${mono.variable}`}>
+      <body className="font-sans">
+        <Providers>{children}</Providers>
+      </body>
+    </html>
+  );
+}
