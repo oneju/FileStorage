@@ -5,10 +5,10 @@ import type { GhConfig } from "@/lib/github";
 import { useAccess } from "@/lib/hooks";
 
 const FIELDS: { key: keyof GhConfig; label: string; placeholder: string }[] = [
-  { key: "owner", label: "owner", placeholder: "wonju" },
-  { key: "repo", label: "repo", placeholder: "wonju.github.io" },
+  { key: "owner", label: "owner", placeholder: "your-github-username" },
+  { key: "repo", label: "repo", placeholder: "your-repo-name" },
   { key: "branch", label: "branch", placeholder: "main" },
-  { key: "dir", label: "bucket root", placeholder: "uploads" },
+  { key: "dir", label: "bucket root", placeholder: "public/uploads" },
 ];
 
 export function Settings({ cfg, onClose }: { cfg: GhConfig; onClose: () => void }) {

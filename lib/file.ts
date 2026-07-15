@@ -1,8 +1,9 @@
-export type Kind = "image" | "text" | "pdf" | "video" | "audio" | "binary";
+export type Kind = "html" | "image" | "text" | "pdf" | "video" | "audio" | "binary";
 
 const IMAGE = ["png", "jpg", "jpeg", "gif", "webp", "svg", "avif", "bmp", "ico"];
+const HTML = ["html", "htm"];
 const TEXT = [
-  "txt", "md", "json", "ts", "tsx", "js", "jsx", "css", "scss", "html", "xml",
+  "txt", "md", "json", "ts", "tsx", "js", "jsx", "css", "scss", "xml",
   "yml", "yaml", "csv", "toml", "sh", "py", "go", "rs", "java", "sql", "env", "log",
 ];
 const VIDEO = ["mp4", "webm", "mov"];
@@ -20,6 +21,7 @@ export function basename(key: string) {
 
 export function kindOf(name: string): Kind {
   const e = ext(name);
+  if (HTML.includes(e)) return "html";
   if (IMAGE.includes(e)) return "image";
   if (TEXT.includes(e)) return "text";
   if (e === "pdf") return "pdf";

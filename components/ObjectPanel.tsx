@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { basename, formatDate, formatSize, kindOf } from "@/lib/file";
-import { blobUrl, historyUrl, rawUrl, type GhConfig, type S3Object } from "@/lib/github";
+import { blobUrl, historyUrl, pagesUrl, rawUrl, type GhConfig, type S3Object } from "@/lib/github";
 import { useDelete, useLastModified } from "@/lib/hooks";
 
 export function ObjectPanel({
@@ -15,6 +15,7 @@ export function ObjectPanel({
   onClosed: () => void;
 }) {
   const url = rawUrl(cfg, object);
+  const live = pagesUrl(cfg, object);
   const kind = kindOf(object.key);
   const del = useDelete(cfg);
   const mtime = useLastModified(cfg, [object]).get(object.sha);
@@ -26,6 +27,24 @@ export function ObjectPanel({
     ["Type", kind],
     ["Last modified", mtime ? formatDate(mtime) : "—"],
     ["ETag", <span key="etag">{object.sha}</span>],
+    [
+      "URL",
+      live ? (
+        <a
+          key="u"
+          href={live}
+          target="_blank"
+          rel="noreferrer"
+          className="underline underline-offset-2"
+        >
+          {live}
+        </a>
+      ) : (
+        <span key="u" className="text-warn">
+          not published — bucket root is outside public/
+        </span>
+      ),
+    ],
   ];
 
   return (
@@ -35,14 +54,19 @@ export function ObjectPanel({
         <div className="flex shrink-0 items-center gap-3 font-mono text-xs">
           <button
             onClick={() => {
-              navigator.clipboard.writeText(url);
+              navigator.clipboard.writeText(live ?? url);
               setCopied(true);
               setTimeout(() => setCopied(false), 1400);
             }}
             className="underline underline-offset-2"
           >
-            {copied ? "copied" : "copy url"}
+            {copied ? "copied" : live ? "copy link" : "copy raw url"}
           </button>
+          {live && (
+            <a href={live} target="_blank" rel="noreferrer" className="underline underline-offset-2">
+              live
+            </a>
+          )}
           <a
             href={blobUrl(cfg, object)}
             target="_blank"
@@ -103,6 +127,7 @@ function Body({ kind, url, name }: { kind: string; url: string; name: string }) 
     return <video src={url} controls className="mx-auto max-h-[26rem] w-full" />;
   }
   if (kind === "audio") return <audio src={url} controls className="w-full" />;
+  if (kind === "html") return <HtmlBody url={url} />;
   if (kind === "text") return <TextBody url={url} />;
   return (
     <p className="py-6 text-center text-sm text-muted">
@@ -112,6 +137,62 @@ function Body({ kind, url, name }: { kind: string; url: string; name: string }) 
       </a>
       .
     </p>
+  );
+}
+
+/**
+ * The uploaded page runs inside a sandbox with no allow-same-origin, which drops
+ * it into an opaque origin. That matters: this app keeps a write-scoped GitHub
+ * token in localStorage, and an iframe sharing our origin could simply read it.
+ * allow-scripts alone lets the page behave like a page without handing it the
+ * keys. Never add allow-same-origin here — combined with allow-scripts the
+ * sandbox can remove its own attribute, and the isolation is theatre.
+ */
+function HtmlBody({ url }: { url: string }) {
+  const [text, setText] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [source, setSource] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    setText(null);
+    setFailed(false);
+    fetch(url)
+      .then((r) => (r.ok ? r.text() : Promise.reject(new Error(String(r.status)))))
+      .then((t) => alive && setText(t))
+      .catch(() => alive && setFailed(true));
+    return () => {
+      alive = false;
+    };
+  }, [url]);
+
+  if (failed) return <p className="font-mono text-xs text-warn">Couldn&apos;t fetch the raw bytes.</p>;
+  if (text === null) return <p className="font-mono text-xs text-muted">loading…</p>;
+
+  return (
+    <div>
+      <div className="mb-2 flex items-center gap-3">
+        <button
+          onClick={() => setSource((v) => !v)}
+          className="font-mono text-xs text-muted underline underline-offset-2 hover:text-ink"
+        >
+          {source ? "show rendered" : "show source"}
+        </button>
+        <span className="font-mono text-[11px] text-muted">sandboxed · no access to this page</span>
+      </div>
+      {source ? (
+        <pre className="max-h-[26rem] overflow-auto bg-paper p-3 font-mono text-xs leading-relaxed">
+          {text}
+        </pre>
+      ) : (
+        <iframe
+          srcDoc={text}
+          sandbox="allow-scripts"
+          title="Rendered page"
+          className="h-[30rem] w-full resize-y border border-rule bg-white"
+        />
+      )}
+    </div>
   );
 }
 

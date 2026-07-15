@@ -3,10 +3,6 @@ name: Deploy to Pages
 on:
   push:
     branches: [main]
-    # Uploading a file commits to uploads/ — don't rebuild the whole site for that.
-    # The app reads those files from raw.githubusercontent, not from the built output.
-    paths-ignore:
-      - "uploads/**"
   workflow_dispatch:
 
 permissions:

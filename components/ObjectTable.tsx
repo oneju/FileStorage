@@ -6,6 +6,7 @@ import { useCreateFolder, useLastModified, useTree } from "@/lib/hooks";
 import { useState } from "react";
 
 const GLYPH: Record<string, string> = {
+  html: "◈",
   image: "◼",
   text: "≡",
   pdf: "▤",

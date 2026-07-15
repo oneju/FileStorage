@@ -98,6 +98,21 @@ export function blobUrl(cfg: GhConfig, obj: S3Object) {
   return `https://github.com/${cfg.owner}/${cfg.repo}/blob/${cfg.branch}/${encodePath(obj.path)}`;
 }
 
+/**
+ * The URL a stranger can open. Only exists for objects under public/, because
+ * that is the one directory `output: export` copies into the build — and being
+ * in the build is what gets a file served with a real Content-Type instead of
+ * raw's text/plain. Null means the object is committed but not published.
+ */
+export function pagesUrl(cfg: GhConfig, obj: S3Object): string | null {
+  const m = obj.path.match(/^public\/(.+)$/);
+  if (!m) return null;
+  const host = `https://${cfg.owner.toLowerCase()}.github.io`;
+  const isUserSite = cfg.repo.toLowerCase() === `${cfg.owner.toLowerCase()}.github.io`;
+  const base = isUserSite ? host : `${host}/${cfg.repo}`;
+  return `${base}/${m[1].split("/").map(encodeURIComponent).join("/")}`;
+}
+
 export function historyUrl(cfg: GhConfig, obj: S3Object) {
   return `https://github.com/${cfg.owner}/${cfg.repo}/commits/${cfg.branch}/${encodePath(obj.path)}`;
 }

@@ -27,13 +27,20 @@ Three decisions worth knowing about:
   with its sha and size — in one request. Prefix navigation is then pure local
   filtering, so clicking into a folder costs zero requests. There is no index to
   drift out of sync with reality.
-- **Preview reads from `raw.githubusercontent.com`, not from the Pages URL.**
-  A file committed to `uploads/` is not part of the built site, and even if it
-  were, Pages takes ~a minute to redeploy. Raw is live the instant the commit
-  lands. The blob SHA rides along as `?v=` because raw sits behind a CDN with a
-  ~5 minute TTL.
-- **Uploads don't trigger a rebuild.** `deploy.yml` has `paths-ignore: uploads/**`,
-  so dropping a file costs zero Actions minutes.
+- **The bucket root lives inside `public/`.** That is the only directory
+  `output: export` copies into the build, and being in the build is what gets a
+  file served by Pages with a real Content-Type. An `.html` under `public/`
+  opens as a page; the same file served from raw is `text/plain` forever, because
+  a domain that let anyone upload executable HTML would be a hole in GitHub. Move
+  the bucket root outside `public/` and objects still commit — they just stop
+  being publishable, and the panel says so.
+- **Two URLs, two jobs.** Previews read `raw.githubusercontent.com` because it
+  is live the instant the commit lands, with the blob SHA as `?v=` to defeat the
+  ~5 minute CDN TTL. The shareable link is the Pages URL, which appears ~1–2
+  minutes later once Actions redeploys.
+- **Uploads trigger a rebuild.** That is the point — Pages has to republish for
+  the file to be reachable. Actions is free on public repos, so this costs time,
+  not money.
 - **Folders are `.gitkeep` carriers.** git can't represent an empty directory, so
   `+ folder` commits a hidden `.gitkeep`. The S3 console does the same thing with
   a zero-byte key. Listings filter it out.
@@ -43,14 +50,14 @@ Three decisions worth knowing about:
 The UI is an object browser, but the store underneath is a git tree. Most of the
 mapping is clean, and one part isn't:
 
-| S3 | here |
-|---|---|
-| Bucket | `owner/repo` at `dir` |
-| Key | path relative to `dir` |
+| S3                         | here                                   |
+| -------------------------- | -------------------------------------- |
+| Bucket                     | `owner/repo` at `dir`                  |
+| Key                        | path relative to `dir`                 |
 | Prefix / delimiter listing | folded from the flat tree, client-side |
-| ETag (content hash) | blob SHA (content hash) |
-| PutObject | a commit |
-| **LastModified** | **not stored** |
+| ETag (content hash)        | blob SHA (content hash)                |
+| PutObject                  | a commit                               |
+| **LastModified**           | **not stored**                         |
 
 git keeps no per-file mtime. A file's "last modified" is a property of history,
 not of the file, so it takes one `GET /commits?path=…&per_page=1` per object.
@@ -91,18 +98,11 @@ npm run build && npm run preview
 
 ## Constraints
 
-| | |
-|---|---|
-| Max file size | 25 MB. The API allows 100 MB, but base64-in-JSON holds the file in browser memory twice |
-| Requests per upload | N blobs + 4. Blobs go up in parallel; the ref moves once |
-| Repo visibility | Public. Private repos need a token on the raw URL, which the `<img>` and `<iframe>` tags can't send |
-| Rate limit | 5,000 requests/hour with a token |
-| Who can upload | Only someone holding a write token — i.e. you |
-
-## If you want more
-
-- **Public uploads** → needs a real backend to hold the token. A Cloudflare
-  Worker that proxies the PUT is the smallest version of this.
-- **Files served from the Pages URL** → change the directory to `public/uploads`
-  and drop the `paths-ignore` from `deploy.yml`. Every upload then triggers a
-  redeploy.
+|                       |                                                                                                     |
+| --------------------- | --------------------------------------------------------------------------------------------------- |
+| Max file size         | 25 MB. The API allows 100 MB, but base64-in-JSON holds the file in browser memory twice             |
+| Requests per upload   | N blobs + 4. Blobs go up in parallel; the ref moves once                                            |
+| Repo visibility       | Public. Private repos need a token on the raw URL, which the `<img>` and `<iframe>` tags can't send |
+| Time to a public link | ~1–2 min after commit, once the Actions deploy finishes                                             |
+| Rate limit            | 5,000 requests/hour with a token                                                                    |
+| Who can upload        | Only someone holding a write token — i.e. you                                                       |

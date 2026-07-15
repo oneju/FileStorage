@@ -8,7 +8,7 @@ type SettingsState = GhConfig & {
   reset: () => void;
 };
 
-const empty: GhConfig = { owner: "", repo: "", branch: "main", dir: "uploads", token: "" };
+const empty: GhConfig = { owner: "", repo: "", branch: "main", dir: "public/uploads", token: "" };
 
 export const useSettings = create<SettingsState>()(
   persist(
