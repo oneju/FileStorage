@@ -58,10 +58,15 @@ export function Settings({ cfg, onClose }: { cfg: GhConfig; onClose: () => void 
         <p className="font-mono text-[11px] text-muted">
           Stored in this browser&apos;s localStorage only. Never committed.
         </p>
-        <div className="flex items-center gap-3 font-mono text-xs">
-          {access.data?.canPush && <span className="text-add">write access ok</span>}
-          {access.data && !access.data.canPush && (
-            <span className="text-warn">read-only token</span>
+        <div className="flex flex-wrap items-center gap-3 font-mono text-xs">
+          {access.data && !access.data.branchExists && (
+            <span className="text-warn">
+              branch &quot;{cfg.branch}&quot; doesn&apos;t exist on this repo
+            </span>
+          )}
+          {access.data?.branchExists && <span className="text-add">repo and branch found</span>}
+          {access.data?.isPrivate && (
+            <span className="text-warn">private repo — previews won&apos;t load</span>
           )}
           {access.error && <span className="text-warn">{(access.error as Error).message}</span>}
           <button onClick={reset} className="text-muted hover:text-ink">

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { basename, formatDate, formatSize, kindOf } from "@/lib/file";
-import { blobUrl, rawUrl, type GhConfig, type S3Object } from "@/lib/github";
+import { blobUrl, historyUrl, rawUrl, type GhConfig, type S3Object } from "@/lib/github";
 import { useDelete, useLastModified } from "@/lib/hooks";
 
 export function ObjectPanel({
@@ -43,11 +43,16 @@ export function ObjectPanel({
           >
             {copied ? "copied" : "copy url"}
           </button>
-          <a href={url} target="_blank" rel="noreferrer" className="underline underline-offset-2">
+          <a
+            href={blobUrl(cfg, object)}
+            target="_blank"
+            rel="noreferrer"
+            className="underline underline-offset-2"
+          >
             open
           </a>
           <a
-            href={blobUrl(cfg, object)}
+            href={historyUrl(cfg, object)}
             target="_blank"
             rel="noreferrer"
             className="underline underline-offset-2"

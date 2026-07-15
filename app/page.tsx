@@ -61,11 +61,7 @@ export default function Page() {
                 onSelect={setSelected}
               />
               {selected && (
-                <ObjectPanel
-                  cfg={cfg}
-                  object={selected}
-                  onClosed={() => setSelected(null)}
-                />
+                <ObjectPanel cfg={cfg} object={selected} onClosed={() => setSelected(null)} />
               )}
             </>
           )}

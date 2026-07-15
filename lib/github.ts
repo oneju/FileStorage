@@ -30,6 +30,29 @@ export class GitHubError extends Error {
   }
 }
 
+/**
+ * GitHub answers an unauthorised write with 404, not 403 — a 403 would confirm
+ * the resource exists to someone who isn't allowed to know. The upshot is that
+ * "Not Found" means "missing OR you lack permission", and the bare message is
+ * useless on its own. Say which call failed and what both branches imply.
+ */
+function explain(err: unknown, step: string, cfg: GhConfig): Error {
+  if (!(err instanceof GitHubError)) return err as Error;
+  if (err.status === 404) {
+    return new GitHubError(
+      404,
+      `${step} returned 404. Either it doesn't exist, or the token can't write to ${cfg.owner}/${cfg.repo}. Check that the token grants Contents: Read and write on this specific repo, and that the branch "${cfg.branch}" exists.`,
+    );
+  }
+  if (err.status === 401) {
+    return new GitHubError(401, `${step}: the token is invalid or expired.`);
+  }
+  if (err.status === 409) {
+    return new GitHubError(409, `${step}: the branch moved while committing. Refresh and retry.`);
+  }
+  return new GitHubError(err.status, `${step}: ${err.message}`);
+}
+
 function encodePath(path: string) {
   return path.split("/").filter(Boolean).map(encodeURIComponent).join("/");
 }
@@ -64,8 +87,19 @@ export function rawUrl(cfg: GhConfig, obj: S3Object) {
   return `https://raw.githubusercontent.com/${cfg.owner}/${cfg.repo}/${cfg.branch}/${encodePath(obj.path)}?v=${obj.sha.slice(0, 7)}`;
 }
 
+/**
+ * github.com renders. raw.githubusercontent.com does not, and never will —
+ * it serves every file as text/plain with nosniff, because a domain that let
+ * you upload arbitrary HTML and have browsers execute it would be a hole in
+ * GitHub, not a feature. So raw is for bytes (previews, embedding) and blob is
+ * for reading.
+ */
 export function blobUrl(cfg: GhConfig, obj: S3Object) {
   return `https://github.com/${cfg.owner}/${cfg.repo}/blob/${cfg.branch}/${encodePath(obj.path)}`;
+}
+
+export function historyUrl(cfg: GhConfig, obj: S3Object) {
+  return `https://github.com/${cfg.owner}/${cfg.repo}/commits/${cfg.branch}/${encodePath(obj.path)}`;
 }
 
 type TreeEntry = { path: string; type: "blob" | "tree"; sha: string; size?: number };
@@ -177,55 +211,75 @@ export async function commitObjects(
   const base = `${API}/repos/${cfg.owner}/${cfg.repo}/git`;
   const root = cfg.dir.replace(/^\/+|\/+$/g, "");
 
+  const at = async <T>(step: string, run: () => Promise<T>): Promise<T> => {
+    try {
+      return await run();
+    } catch (err) {
+      throw explain(err, step, cfg);
+    }
+  };
+
+  // Resolve the branch first. If it doesn't exist there is no point uploading
+  // megabytes of blobs, and a 404 here has a much narrower meaning than one on a
+  // write: reads of a public repo work without any permission at all.
+  const ref = await at(`Reading branch "${cfg.branch}"`, () =>
+    gh<{ object: { sha: string } }>(`${base}/ref/heads/${encodeURIComponent(cfg.branch)}`, cfg),
+  );
+  const parent = ref.object.sha;
+  const parentCommit = await at("Reading the parent commit", () =>
+    gh<{ tree: { sha: string } }>(`${base}/commits/${parent}`, cfg),
+  );
+
   let done = 0;
   onPhase?.({ step: "blobs", done, total: uploads.length });
 
-  const blobs = await Promise.all(
-    uploads.map(async (u) => {
-      const content = await toBase64(u.file);
-      const blob = await gh<{ sha: string }>(`${base}/blobs`, cfg, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content, encoding: "base64" }),
-      });
-      done += 1;
-      onPhase?.({ step: "blobs", done, total: uploads.length });
-      return {
-        path: `${root}/${u.key.replace(/^\/+/, "")}`,
-        mode: "100644" as const,
-        type: "blob" as const,
-        sha: blob.sha,
-      };
+  const blobs = await at("Writing blobs", () =>
+    Promise.all(
+      uploads.map(async (u) => {
+        const content = await toBase64(u.file);
+        const blob = await gh<{ sha: string }>(`${base}/blobs`, cfg, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content, encoding: "base64" }),
+        });
+        done += 1;
+        onPhase?.({ step: "blobs", done, total: uploads.length });
+        return {
+          path: `${root}/${u.key.replace(/^\/+/, "")}`,
+          mode: "100644" as const,
+          type: "blob" as const,
+          sha: blob.sha,
+        };
+      }),
+    ),
+  );
+
+  onPhase?.({ step: "tree" });
+  const tree = await at("Building the tree", () =>
+    gh<{ sha: string }>(`${base}/trees`, cfg, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ base_tree: parentCommit.tree.sha, tree: blobs }),
     }),
   );
 
-  const ref = await gh<{ object: { sha: string } }>(
-    `${base}/ref/heads/${encodeURIComponent(cfg.branch)}`,
-    cfg,
-  );
-  const parent = ref.object.sha;
-  const parentCommit = await gh<{ tree: { sha: string } }>(`${base}/commits/${parent}`, cfg);
-
-  onPhase?.({ step: "tree" });
-  const tree = await gh<{ sha: string }>(`${base}/trees`, cfg, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ base_tree: parentCommit.tree.sha, tree: blobs }),
-  });
-
   onPhase?.({ step: "commit" });
-  const commit = await gh<{ sha: string; html_url: string }>(`${base}/commits`, cfg, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message, tree: tree.sha, parents: [parent] }),
-  });
+  const commit = await at("Creating the commit", () =>
+    gh<{ sha: string; html_url: string }>(`${base}/commits`, cfg, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message, tree: tree.sha, parents: [parent] }),
+    }),
+  );
 
   onPhase?.({ step: "ref" });
-  await gh(`${base}/refs/heads/${encodeURIComponent(cfg.branch)}`, cfg, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ sha: commit.sha }),
-  });
+  await at(`Moving "${cfg.branch}" to the new commit`, () =>
+    gh(`${base}/refs/heads/${encodeURIComponent(cfg.branch)}`, cfg, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sha: commit.sha }),
+    }),
+  );
 
   return { commit };
 }
@@ -250,10 +304,40 @@ export async function deleteObject(cfg: GhConfig, obj: S3Object) {
   });
 }
 
-export async function verifyAccess(cfg: GhConfig) {
+export type Access = {
+  pushReported: boolean | undefined;
+  isPrivate: boolean;
+  branchExists: boolean;
+};
+
+/**
+ * Check the two things that actually stop a commit, and don't pretend to know
+ * more than the API says.
+ *
+ * `permissions.push` describes the repository role, not what a fine-grained
+ * token was granted, so it can't be read as "this token may write" — treating
+ * it that way produced a confident false negative. It stays here as a hint and
+ * nothing more. The branch, on the other hand, is the first hard requirement:
+ * commitObjects resolves the ref before anything else, and a missing branch is
+ * indistinguishable from a permission failure once GitHub masks 403 as 404.
+ */
+export async function verifyAccess(cfg: GhConfig): Promise<Access> {
   const repo = await gh<{ permissions?: { push?: boolean }; private: boolean }>(
     `${API}/repos/${cfg.owner}/${cfg.repo}`,
     cfg,
   );
-  return { canPush: Boolean(repo.permissions?.push), isPrivate: repo.private };
+
+  let branchExists = true;
+  try {
+    await gh(`${API}/repos/${cfg.owner}/${cfg.repo}/git/ref/heads/${encodeURIComponent(cfg.branch)}`, cfg);
+  } catch (err) {
+    if (err instanceof GitHubError && err.status === 404) branchExists = false;
+    else throw err;
+  }
+
+  return {
+    pushReported: repo.permissions?.push,
+    isPrivate: repo.private,
+    branchExists,
+  };
 }
