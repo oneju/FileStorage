@@ -9,11 +9,11 @@ import { Settings } from "@/components/Settings";
 import { Uploader } from "@/components/Uploader";
 import { isConfigured, type S3Object } from "@/lib/github";
 import { useHydrated } from "@/lib/hooks";
-import { selectConfig, useSettings } from "@/lib/store";
+import { useConfig } from "@/lib/store";
 
 export default function Page() {
   const hydrated = useHydrated();
-  const cfg = useSettings(selectConfig);
+  const cfg = useConfig();
   const [prefix, setPrefix] = useState("");
   const [selected, setSelected] = useState<S3Object | null>(null);
   const [showSettings, setShowSettings] = useState(false);
@@ -61,7 +61,11 @@ export default function Page() {
                 onSelect={setSelected}
               />
               {selected && (
-                <ObjectPanel cfg={cfg} object={selected} onClosed={() => setSelected(null)} />
+                <ObjectPanel
+                  cfg={cfg}
+                  object={selected}
+                  onClosed={() => setSelected(null)}
+                />
               )}
             </>
           )}
