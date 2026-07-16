@@ -45,57 +45,6 @@ Three decisions worth knowing about:
   `+ folder` commits a hidden `.gitkeep`. The S3 console does the same thing with
   a zero-byte key. Listings filter it out.
 
-## Where git and S3 disagree
-
-The UI is an object browser, but the store underneath is a git tree. Most of the
-mapping is clean, and one part isn't:
-
-| S3                         | here                                   |
-| -------------------------- | -------------------------------------- |
-| Bucket                     | `owner/repo` at `dir`                  |
-| Key                        | path relative to `dir`                 |
-| Prefix / delimiter listing | folded from the flat tree, client-side |
-| ETag (content hash)        | blob SHA (content hash)                |
-| PutObject                  | a commit                               |
-| **LastModified**           | **not stored**                         |
-
-git keeps no per-file mtime. A file's "last modified" is a property of history,
-not of the file, so it takes one `GET /commits?path=…&per_page=1` per object.
-The table fills those in progressively and caches each one against the blob SHA
-with no expiry — a sha that hasn't changed cannot have a different last-modified.
-If you have hundreds of objects and want the column free, drop it, or maintain a
-manifest and accept that it can drift.
-
-## Setup
-
-1. **Create the repo** and push this project to `main`.
-
-2. **Turn on Pages**: Settings → Pages → Source → **GitHub Actions**.
-
-3. **Issue a token**: [Fine-grained PAT](https://github.com/settings/tokens?type=beta)
-   → Repository access → **Only select repositories** → pick this one →
-   Permissions → Repository permissions → **Contents: Read and write**.
-   That is the only permission needed.
-
-4. **Open the site**, click `target`, and fill in owner / repo / branch /
-   directory / token.
-
-The token lives in `localStorage` under `gh-file-drop`. It is never committed
-and never leaves your browser except to `api.github.com`.
-
-## Local dev
-
-```bash
-npm install
-npm run dev
-```
-
-To test the static output as it will actually be served:
-
-```bash
-npm run build && npm run preview
-```
-
 ## Constraints
 
 |                       |                                                                                                     |
