@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>퇴사 준비 체크리스트</title>
+
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css"
+    />
+
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: "Pretendard", sans-serif;
+      }
+
+      body {
+        background: #f6f7fb;
+        color: #1f2937;
+        padding: 60px 20px;
+      }
+
+      .container {
+        max-width: 900px;
+        margin: auto;
+      }
+
+      header {
+        margin-bottom: 40px;
+      }
+
+      h1 {
+        font-size: 36px;
+        font-weight: 800;
+      }
+
+      .subtitle {
+        margin-top: 10px;
+        color: #6b7280;
+        line-height: 1.6;
+      }
+
+      .progress-box {
+        background: white;
+        border-radius: 20px;
+        padding: 24px;
+        margin-bottom: 30px;
+        box-shadow: 0 15px 40px rgba(0, 0, 0, 0.05);
+      }
+
+      .progress {
+        height: 12px;
+        background: #ececec;
+        border-radius: 999px;
+        overflow: hidden;
+        margin-top: 15px;
+      }
+
+      .progress-bar {
+        width: 0%;
+        height: 100%;
+        background: linear-gradient(90deg, #60a5fa, #7c3aed);
+        transition: 0.3s;
+      }
+
+      .percent {
+        margin-top: 10px;
+        font-weight: 700;
+        color: #4f46e5;
+      }
+
+      .card {
+        background: white;
+        border-radius: 20px;
+        padding: 28px;
+        margin-bottom: 22px;
+        box-shadow: 0 15px 40px rgba(0, 0, 0, 0.05);
+      }
+
+      .card h2 {
+        font-size: 22px;
+        margin-bottom: 18px;
+      }
+
+      ul {
+        list-style: none;
+      }
+
+      li {
+        display: flex;
+        gap: 14px;
+        align-items: flex-start;
+        margin: 16px 0;
+        line-height: 1.6;
+      }
+
+      input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+        accent-color: #6366f1;
+        margin-top: 3px;
+      }
+
+      .note {
+        margin-top: 18px;
+        background: #eef4ff;
+        padding: 18px;
+        border-radius: 14px;
+        color: #4b5563;
+        line-height: 1.7;
+      }
+
+      .footer {
+        text-align: center;
+        color: #9ca3af;
+        margin-top: 45px;
+        font-size: 14px;
+      }
+
+      @media print {
+        body {
+          background: white;
+          padding: 0;
+        }
+
+        .card,
+        .progress-box {
+          box-shadow: none;
+          border: 1px solid #ddd;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="container">
+      <header>
+        <h1>퇴사 준비 체크리스트 ✅</h1>
+
+        <p class="subtitle">
+          퇴사는 감정으로 하는 것이 아니라 준비로 하는 것.<br />
+          모든 항목을 완벽하게 채울 필요는 없지만,
+          <strong>스스로 납득할 만큼 준비되었다면 충분합니다.</strong>
+        </p>
+      </header>
+
+      <div class="progress-box">
+        <h3>진행률</h3>
+
+        <div class="progress">
+          <div class="progress-bar"></div>
+        </div>
+
+        <div class="percent">0% 완료</div>
+      </div>
+
+      <div class="card">
+        <h2>💼 업무</h2>
+
+        <ul>
+          <li>
+            <input type="checkbox" />프로젝트에서 맡은 업무를 모두 마무리했다.
+          </li>
+
+          <li><input type="checkbox" />남은 이슈와 버그를 문서로 정리했다.</li>
+
+          <li><input type="checkbox" />인수인계 문서를 작성했다.</li>
+
+          <li>
+            <input type="checkbox" />코드 및 저장소를 최신 상태로 정리했다.
+          </li>
+
+          <li>
+            <input type="checkbox" />회사에서 추가 질문이 최소화될 만큼
+            정리했다.
+          </li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h2>📄 행정</h2>
+
+        <ul>
+          <li><input type="checkbox" />퇴사 의사를 적절한 시기에 전달했다.</li>
+
+          <li><input type="checkbox" />퇴사 일정이 확정되었다.</li>
+
+          <li><input type="checkbox" />필요한 서류를 요청했다.</li>
+
+          <li><input type="checkbox" />회사 계정과 개인 자료를 분리했다.</li>
+
+          <li>
+            <input type="checkbox" />회사 자산(노트북 등) 반납 계획을 확인했다.
+          </li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h2>💰 재정</h2>
+
+        <ul>
+          <li><input type="checkbox" />생활비 계획을 세웠다.</li>
+
+          <li>
+            <input type="checkbox" />퇴직 후 최소 몇 개월 버틸 수 있는지
+            계산했다.
+          </li>
+
+          <li>
+            <input type="checkbox" />청년주택 결과 및 이사 계획을 확인했다.
+          </li>
+
+          <li><input type="checkbox" />구직 일정 또는 휴식 계획을 세웠다.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h2>🧠 마음가짐</h2>
+
+        <ul>
+          <li><input type="checkbox" />감정이 아닌 이유를 설명할 수 있다.</li>
+
+          <li>
+            <input type="checkbox" />'왜 퇴사하는지'를 한 문장으로 말할 수 있다.
+          </li>
+
+          <li>
+            <input type="checkbox" />남아야 할 이유도 충분히 고민해 보았다.
+          </li>
+
+          <li>
+            <input type="checkbox" />후회가 생길 수 있다는 점도 받아들였다.
+          </li>
+
+          <li>
+            <input type="checkbox" />지금의 결정에 스스로 책임질 준비가 되어
+            있다.
+          </li>
+        </ul>
+
+        <div class="note">
+          <b>✔ 마지막 질문</b><br /><br />
+
+          "지금 퇴사하는 이유는 단순히 힘들어서인가?"<br />
+          "아니면 이 회사에서 더 이상 얻을 것이 없다고 판단했기 때문인가?"<br /><br />
+
+          이 질문에 스스로 답할 수 있다면, 이미 충분히 많은 고민을 한 것입니다.
+        </div>
+      </div>
+
+      <div class="footer">Made for a calm and confident resignation 🌿</div>
+    </div>
+
+    <script>
+      const checkboxes = document.querySelectorAll("input[type=checkbox]");
+      const bar = document.querySelector(".progress-bar");
+      const text = document.querySelector(".percent");
+
+      function update() {
+        const checked = document.querySelectorAll(
+          "input[type=checkbox]:checked",
+        ).length;
+
+        const total = checkboxes.length;
+
+        const percent = Math.round((checked / total) * 100);
+
+        bar.style.width = percent + "%";
+
+        text.textContent = percent + "% 완료";
+      }
+
+      checkboxes.forEach((c) => c.addEventListener("change", update));
+    </script>
+  </body>
+</html>
